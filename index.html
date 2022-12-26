@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OfflineOverflow</title>
+    <style>
+        body {max-width:70vw;margin:auto;}
+        .highlight em { background-color: yellow; }
+        a {text-decoration: none;}
+        pre,code {background-color: lightsteelblue;outline: 2px solid lightsteelblue;}
+        pre > code {background:none;outline:none;}
+    </style>
+</head>
+<body>
+    <h1>Offline<span style="color:orange">Overflow</span></h1>
+    <form action="/index.html" method="get">
+        <input type="search" name="query" required />
+        <input type="submit" type="search"/>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        const raw = async body => new Promise(resolve => fetch('/_search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(r => r.json())
+        .then(r => r.hits.hits)
+        .then(resolve)
+        )
+
+        const search = async query => await raw({
+            size: 30,
+            query: {
+                simple_query_string: {
+                    query,
+                    fields: ['title^5', 'body', 'tags']
+                }
+            },
+            highlight: {
+                pre_tags: ['XXXEMXXX'],
+                post_tags: ['YYYEMYYY'],
+                fields: {
+                    title: {},
+                    body: {}
+                }
+            }
+        })
+
+        const single = async id => {
+            const question = await raw({
+                size: 1,
+                query: { 
+                    term: {
+                        id: {
+                            value:id
+                        }
+                    }
+                }
+            })
+            const answers = await raw({
+                size: 1000,
+                query: {
+                    term: {
+                        parentId: {
+                            value:id
+                        }
+                    }
+                }
+            })
+            
+            return {
+                question: question.shift()._source,
+                answers: answers.map(a => a._source).sort((a,b) => b.score - a.score)
+            }
+        }
+        
+    </script>
+    <script>
+        function renderSearchResults(items) {
+            window.items = items
+            if (items.length) {
+                let html = '<h2>Search Results</h2><ol>'
+                for(const item of items) {
+                    const id = item._source.postTypeId === 1 ? item._source.id : item._source.parentId
+                    html += '<li class="highlight">'
+                    html += `<p><b><a href="/index.html?id=${id}">${item.highlight.title.map(line => line.replace(/XXXEMXXX/gi, '<em>').replace(/YYYEMYYY/gi, '</em>')).join(' ') || item._source.title}</a></b></p>`
+                    html += '<p>'
+                        html += item.highlight.body?.map(line => line.replace(/\<\/?[^\>]+(\>|$)/gi, '').replace(/XXXEMXXX/gi, '<em>').replace(/YYYEMYYY/gi, '</em>')).join('<br>')
+                        html += '/<p>'
+                    html += '</li>'
+                }
+                html += '</ol>'
+                document.getElementById('result').innerHTML = html
+            } else {
+                document.getElementById('result').innerHTML = '<h2>Nothing Found</h2>'
+            }
+        }
+
+        function renderSingle(question, answers) {
+            window.question = question
+            window.answers = answers
+            let html = `<h2>${question.title}</h2>`
+            html += question.body
+            
+            if (!answers.length) {
+                html += '<h3>No Answers Found</h3>'
+            } else {
+                html += '<h3>Answers</h3>'
+                for(const answer of answers) {
+                    html += '<hr>'
+                    html += `<p>score: <b>${answer.score}</b>${answer.id === question.acceptedAnswerId ? ' <b>accepted</b> ' : ''}</p>`
+                    html += answer.body
+                }
+            }
+            document.getElementById('result').innerHTML = html
+        }
+    </script>
+    <script>
+        const query = new URL(window.location.href).searchParams.get('query')
+        if (query) {
+            document.querySelector('input[name="query"]').value = query
+            search(query).then(renderSearchResults)
+        }
+
+        const id = new URL(window.location.href).searchParams.get('id')
+        if (id) {
+            single(id).then(({question, answers}) => renderSingle(question, answers))
+        }
+    </script>
+</body>
+</html>
