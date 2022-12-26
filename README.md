@@ -12,9 +12,9 @@ Build our own container with UI
 
 ## StackOverflow Dataset
 
-Public StackOverflow dataset can be found here: TODO
+Public StackOverflow dataset can be found here: https://archive.org/download/stackexchange/Stackoverflow.com-Posts.7z
 
-Other datasets available here: TODO
+Other datasets available here: https://archive.org/download/stackexchange
 
 Take a note that file size is almost 20gb so it may take from few hours to infinity to download it, taking that into consideration recomdation is to also download some smaller datasets (in my experimentations I was playing with "apple.stackexchange.com.7z" which is only 250mb in size)
 
@@ -22,10 +22,10 @@ So in my case it was:
 
 ```bash
 # download small dataset for experiments
-wget TODO
+wget https://archive.org/download/stackexchange/apple.stackexchange.com.7z
 
 # download full dataset
-wget TODO
+wget https://archive.org/download/stackexchange/Stackoverflow.com-Posts.7z
 ```
 
 To check validity of archive you may use:
@@ -68,7 +68,11 @@ And run import:
 dotnet run
 ```
 
-In my experiment with small dataset it took approx one minute to import 25K documents, but for big dataset it will take approx 90 minutes
+In my experiment with small dataset it took approx one minute to import 25K documents, but for big dataset it will take approx 2-3 hours
+
+```log
+done indexing 5320662 questions with 0 errors in 01:12:45
+```
 
 After import is done, we may want to check what data we have:
 
